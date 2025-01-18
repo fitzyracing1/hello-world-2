@@ -75,4 +75,77 @@ jobs:
       with:
         app-name: ${{ env.AZURE_WEBAPP_NAME }}
         publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+      
         package: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
+
+        import time
+import threading
+from collections import deque
+
+class Process:
+    def __init__(self, name, burst_time, io_time=None):
+        self.name = name
+        self.burst_time = burst_time  # CPU time needed
+        self.io_time = io_time if io_time is not None else 0  # I/O time if any
+        self.remaining_time = burst_time
+        self.state = "New"
+
+    def run(self, time_slice):
+        if self.remaining_time > 0:
+            self.state = "Running"
+            actual_time = min(time_slice, self.remaining_time)
+            time.sleep(actual_time)  # Simulate CPU time
+            self.remaining_time -= actual_time
+            if self.remaining_time == 0:
+                self.state = "Terminated"
+                print(f"{self.name} finished execution.")
+            elif self.io_time > 0:
+                self.state = "Waiting"
+                print(f"{self.name} is waiting for I/O.")
+                time.sleep(self.io_time)  # Simulate I/O time
+                self.io_time = 0
+                self.state = "Ready"
+            else:
+                self.state = "Ready"
+
+class Scheduler:
+    def __init__(self, time_slice=1):
+        self.ready_queue = deque()
+        self.time_slice = time_slice  # Quantum for Round Robin
+
+    def add_process(self, process):
+        process.state = "Ready"
+        self.ready_queue.append(process)
+        print(f"{process.name} added to ready queue.")
+
+    def schedule(self):
+        while self.ready_queue:
+            process = self.ready_queue.popleft()
+            if process.state != "Terminated":
+                process.run(self.time_slice)
+                if process.state == "Ready":
+                    self.ready_queue.append(process)
+
+# Example usage
+if __name__ == "__main__":
+    scheduler = Scheduler(time_slice=2)
+
+    # Creating sample processes
+    processes = [
+        Process("P1", 5, io_time=2),  # Process with I/O
+        Process("P2", 3),
+        Process("P3", 4, io_time=1)
+    ]
+
+    # Add processes to scheduler
+    for process in processes:
+        scheduler.add_process(process)
+
+    # Start scheduling
+    scheduler_thread = threading.Thread(target=scheduler.schedule)
+    scheduler_thread.start()
+
+    # Wait for scheduling to complete
+    scheduler_thread.join()
+    print("All processes have completed.")
+    
