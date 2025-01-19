@@ -148,4 +148,42 @@ if __name__ == "__main__":
     # Wait for scheduling to complete
     scheduler_thread.join()
     print("All processes have completed.")
+    from flask import Flask, request, jsonify
+import re
+
+app = Flask(__name__)
+
+# Function to validate the strength of the password
+def is_strong_password(password):
+    # At least 8 characters long
+    if len(password) < 8:
+        return False
+    # Contains both uppercase and lowercase characters
+    if not re.search(r'[A-Z]', password) or not re.search(r'[a-z]', password):
+        return False
+    # Contains at least one numerical digit
+    if not re.search(r'\d', password):
+        return False
+    # Contains at least one special character
+    if not re.search(r'[!@#$%^&*(),.?":{}|<>]', password):
+        return False
+    return True
+
+@app.route('/signup', methods=['POST'])
+def signup():
+    data = request.json
+    username = data.get('username')
+    password = data.get('password')
     
+    if not username or not password:
+        return jsonify({'error': 'Username and password are required'}), 400
+
+    if not is_strong_password(password):
+        return jsonify({'error': 'Password is not strong enough'}), 400
+
+    # Here you would add logic to save the user to the database
+    # For this example, we'll just return a success message
+    return jsonify({'message': 'User signed up successfully!'}), 201
+
+if __name__ == '__main__':
+    app.run(debug=True)
